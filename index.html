@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akatsuki Class</title>
+<style>
+  :root{
+    --void: #0a0707;
+    --void-deep: #050303;
+    --blood: #c1272d;
+    --blood-bright: #e0454c;
+    --blood-dim: #5e1418;
+    --green: #3ecf6e;
+    --green-dim: #1f6b3a;
+    --paper: #e8d9c5;
+    --paper-dim: #8a7a6c;
+    --panel: rgba(20,12,12,0.78);
+    --font-display: 'Noto Serif JP', 'Georgia', serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html, body{
+    height:100%;
+    background: var(--void);
+    color: var(--paper);
+    font-family: var(--font-body);
+    overflow-x:hidden;
+  }
+
+  /* ---------- atmósfera ---------- */
+  .atmosphere{
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse at 50% 110%, rgba(193,39,45,0.18), transparent 60%),
+      radial-gradient(ellipse at 20% 20%, rgba(193,39,45,0.06), transparent 50%),
+      var(--void);
+  }
+  .fog{
+    position:fixed; inset:0; z-index:1;
+    background-image:
+      radial-gradient(circle at 30% 80%, rgba(94,20,24,0.25), transparent 45%),
+      radial-gradient(circle at 75% 70%, rgba(94,20,24,0.18), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(193,39,45,0.12), transparent 50%);
+    animation: drift 30s ease-in-out infinite alternate;
+    pointer-events:none;
+  }
+  @keyframes drift{
+    0%{ transform: translateX(0) scale(1); }
+    100%{ transform: translateX(-3%) scale(1.05); }
+  }
+  .vignette{
+    position:fixed; inset:0; z-index:5;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.78) 100%);
+    pointer-events:none;
+  }
+
+  /* siluetas */
+  .silhouettes{
+    position:fixed; inset:0; z-index:2;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-around;
+    padding: 0 4vw;
+    pointer-events:none;
+    opacity:0.55;
+  }
+  .figure{
+    width: 16vw; max-width:220px; min-width:90px; height:78vh;
+    filter: drop-shadow(0 0 40px rgba(193,39,45,0.15));
+  }
+  .figure svg{ width:100%; height:100%; display:block; }
+  .red-cloud{ fill: var(--blood); opacity:0.85; }
+  @media (max-width: 720px){
+    .figure.f1, .figure.f5{ display:none; }
+    .figure{ width:24vw; height:65vh; }
+  }
+  @media (max-width: 480px){
+    .figure.f3{ display:none; }
+    .figure{ width:34vw; }
+  }
+
+  /* ---------- topbar / menú hamburguesa ---------- */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:30;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 1.2rem 1.5rem;
+  }
+  .brand{
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 0.15em;
+    color: var(--paper);
+    text-shadow: 0 0 20px rgba(193,39,45,0.35);
+  }
+  .brand span{ color: var(--blood); }
+
+  .hamburger{
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--blood-dim);
+    background: var(--panel);
+    backdrop-filter: blur(6px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 5px;
+    cursor:pointer;
+    transition: border-color 0.2s ease;
+  }
+  .hamburger:hover{ border-color: var(--blood); }
+  .hamburger span{
+    display:block; width:18px; height:2px; background: var(--paper);
+    border-radius:1px;
+  }
+
+  /* panel lateral */
+  .side-panel{
+    position:fixed; top:0; right:0; height:100vh; width: min(340px, 88vw);
+    background: rgba(10,7,7,0.92);
+    border-left: 1px solid var(--blood-dim);
+    backdrop-filter: blur(12px);
+    z-index: 40;
+    transform: translateX(100%);
+    transition: transform 0.35s ease;
+    padding: 1.6rem;
+    display:flex; flex-direction:column; gap:1.4rem;
+    overflow-y:auto;
+  }
+  .side-panel.open{ transform: translateX(0); }
+  .side-panel h2{
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    letter-spacing: 0.12em;
+    color: var(--blood);
+    border-bottom: 1px solid var(--blood-dim);
+    padding-bottom: 0.8rem;
+  }
+  .side-close{
+    align-self:flex-end;
+    width:36px; height:36px; border-radius:50%;
+    border:1px solid var(--blood-dim); background:transparent; color:var(--paper);
+    cursor:pointer; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .google-btn{
+    display:flex; align-items:center; justify-content:center; gap:0.7rem;
+    width:100%; padding: 0.85rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--blood-dim);
+    background: rgba(255,255,255,0.04);
+    color: var(--paper);
+    font-size: 0.95rem; font-weight:500;
+    cursor:pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .google-btn:hover{ border-color: var(--blood); background: rgba(255,255,255,0.07); }
+  .google-btn svg{ width:20px; height:20px; }
+
+  .field{ display:flex; flex-direction:column; gap:0.5rem; }
+  .field label{
+    font-size: 0.72rem; letter-spacing:0.18em; text-transform:uppercase;
+    color: var(--paper-dim);
+  }
+  .field input, .field select{
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--blood-dim);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    outline:none;
+    transition: border-color 0.2s ease;
+  }
+  .field input:focus, .field select:focus{ border-color: var(--blood); }
+
+  .btn{
+    padding: 0.8rem 1.2rem;
+    border-radius: 999px;
+    border: none;
+    background: var(--blood);
+    color: var(--void-deep);
+    font-weight:600; font-size:0.95rem;
+    cursor:pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .btn:hover{ background: var(--blood-bright); transform: translateY(-1px); }
+  .btn.secondary{
+    background: transparent; border: 1px solid var(--blood-dim); color: var(--paper);
+  }
+  .btn.secondary:hover{ border-color: var(--blood); background: rgba(193,39,45,0.08); }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .generated-code{
+    margin-top: 0.4rem;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px dashed var(--blood);
+    text-align:center;
+    background: rgba(193,39,45,0.06);
+  }
+  .generated-code .label{
+    font-size:0.7rem; letter-spacing:0.2em; text-transform:uppercase; color: var(--paper-dim);
+  }
+  .generated-code .code{
+    font-family: var(--font-display);
+    font-size: 2.1rem; letter-spacing:0.25em; color: var(--blood-bright);
+    margin-top: 0.3rem;
+  }
+
+  .classes-list{ display:flex; flex-direction:column; gap:0.6rem; }
+  .class-chip{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0.7rem 0.9rem;
+    border:1px solid var(--blood-dim); border-radius:10px;
+    background: rgba(255,255,255,0.02);
+    cursor:pointer;
+    transition: border-color 0.2s ease;
+  }
+  .class-chip:hover{ border-color: var(--blood); }
+  .class-chip.active{ border-color: var(--green-dim); background: rgba(62,207,110,0.06); }
+  .class-chip .name{ font-weight:600; font-size:0.9rem; }
+  .class-chip .code{ font-size:0.75rem; color: var(--paper-dim); letter-spacing:0.15em; }
+
+  /* ---------- main ---------- */
+  main{
+    position:relative; z-index:10;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 9vh 6vw 4vh;
+  }
+
+  .eyebrow{
+    font-size: 0.75rem; letter-spacing:0.35em; text-transform:uppercase;
+    color: var(--blood); margin-bottom: 1rem;
+  }
+  h1.title{
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 9vw, 5.5rem);
+    font-weight:700; letter-spacing:0.08em; line-height:1;
+    text-shadow: 0 0 60px rgba(193,39,45,0.35);
+  }
+  .subtitle{
+    margin-top: 1rem; font-size: clamp(1rem, 2.2vw, 1.3rem);
+    color: var(--paper-dim);
+  }
+
+  /* ---------- formulario alumno ---------- */
+  .join-form{
+    margin-top: 2.6rem; width:100%; max-width: 460px;
+    display:flex; flex-direction:column; gap: 0.9rem;
+  }
+  .join-form .row{
+    display:flex; align-items:center; gap:0.6rem;
+    background: rgba(20,12,12,0.7);
+    border: 1px solid var(--blood-dim);
+    border-radius: 999px;
+    padding: 0.3rem 0.4rem 0.3rem 1.4rem;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .join-form .row:focus-within{
+    border-color: var(--blood);
+    box-shadow: 0 0 0 4px rgba(193,39,45,0.12), 0 0 30px rgba(193,39,45,0.2);
+  }
+  .join-form input{
+    flex:1; background:transparent; border:none; outline:none;
+    color: var(--paper); font-size:1rem; padding: 0.7rem 0.5rem;
+    letter-spacing: 0.02em;
+  }
+  .join-form input::placeholder{ color: var(--paper-dim); opacity:0.7; }
+
+  .join-form .submit{
+    flex-shrink:0; width:44px; height:44px; border-radius:50%;
+    border:none; background: var(--blood); color: var(--void-deep);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .join-form .submit:hover{ background: var(--blood-bright); transform: scale(1.06); }
+  .join-form .submit svg{ width:18px; height:18px; }
+
+  .error-msg{
+    color: var(--blood-bright); font-size:0.85rem; min-height:1.2em;
+  }
+
+  /* ---------- círculo ---------- */
+  .ring-zone{
+    margin-top: 3rem; display:flex; flex-direction:column; align-items:center; gap:1.2rem;
+  }
+  .ring-status{
+    font-size:0.75rem; letter-spacing:0.25em; text-transform:uppercase; color: var(--paper-dim);
+  }
+  .ring{
+    width: 180px; height:180px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display); font-size:1.1rem; letter-spacing:0.1em;
+    border: 2px solid var(--blood-dim);
+    background: radial-gradient(circle at 50% 40%, rgba(94,20,24,0.5), rgba(10,7,7,0.9));
+    color: var(--paper-dim);
+    transition: all 0.35s ease;
+    cursor: default;
+    user-select:none;
+  }
+  .ring.green{
+    border-color: var(--green);
+    background: radial-gradient(circle at 50% 40%, rgba(62,207,110,0.35), rgba(10,7,7,0.9));
+    color: var(--green);
+    box-shadow: 0 0 40px rgba(62,207,110,0.35), inset 0 0 30px rgba(62,207,110,0.15);
+    cursor:pointer;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .ring.red{
+    border-color: var(--blood);
+    box-shadow: 0 0 30px rgba(193,39,45,0.25);
+  }
+  .ring.tapped{
+    animation:none;
+    border-color: var(--paper-dim);
+    background: radial-gradient(circle at 50% 40%, rgba(138,122,108,0.25), rgba(10,7,7,0.9));
+    color: var(--paper-dim);
+    box-shadow:none;
+    cursor:default;
+  }
+  @keyframes pulse{
+    0%, 100%{ transform: scale(1); }
+    50%{ transform: scale(1.04); }
+  }
+
+  /* controles maestro */
+  .teacher-controls{
+    display:flex; gap:0.8rem; margin-top: 1rem; flex-wrap:wrap; justify-content:center;
+  }
+  .toggle-btn{
+    padding: 0.7rem 1.4rem; border-radius:999px; font-weight:600; font-size:0.85rem;
+    letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; border:1px solid;
+    transition: all 0.2s ease;
+  }
+  .toggle-btn.go{
+    border-color: var(--green-dim); color: var(--green);
+    background: rgba(62,207,110,0.06);
+  }
+  .toggle-btn.go.active{ background: var(--green); color: var(--void-deep); border-color: var(--green); }
+  .toggle-btn.stop{
+    border-color: var(--blood-dim); color: var(--blood-bright);
+    background: rgba(193,39,45,0.06);
+  }
+  .toggle-btn.stop.active{ background: var(--blood); color: var(--void-deep); border-color: var(--blood); }
+  .toggle-btn.reset{
+    border-color: var(--paper-dim); color: var(--paper-dim);
+    background: transparent;
+  }
+  .toggle-btn:hover{ filter: brightness(1.15); }
+
+  /* lista de respuestas */
+  .ranking{
+    margin-top: 2.2rem; width:100%; max-width: 420px;
+    text-align:left;
+  }
+  .ranking h3{
+    font-size:0.75rem; letter-spacing:0.25em; text-transform:uppercase;
+    color: var(--paper-dim); margin-bottom: 0.8rem; text-align:center;
+  }
+  .ranking ol{ list-style:none; display:flex; flex-direction:column; gap:0.5rem; }
+  .ranking li{
+    display:flex; align-items:center; gap:0.8rem;
+    padding: 0.6rem 0.9rem;
+    border:1px solid var(--blood-dim); border-radius:10px;
+    background: rgba(255,255,255,0.02);
+    font-size:0.9rem;
+    animation: slideIn 0.35s ease-out;
+  }
+  @keyframes slideIn{
+    from{ opacity:0; transform: translateX(14px); }
+    to{ opacity:1; transform: translateX(0); }
+  }
+  .ranking li .pos{
+    font-family: var(--font-display);
+    color: var(--blood-bright);
+    font-weight:700; width:1.6em; text-align:center;
+    flex-shrink:0;
+  }
+  .ranking li.gold .pos{ color: #f4c542; }
+  .ranking li .time{
+    margin-left:auto; color: var(--paper-dim); font-size:0.75rem;
+  }
+  .ranking .empty{
+    text-align:center; color: var(--paper-dim); font-size:0.85rem; padding: 0.8rem 0;
+  }
+
+  /* clase activa info */
+  .class-meta{
+    margin-top: 2rem; display:flex; flex-wrap:wrap; gap:0.6rem; justify-content:center;
+  }
+  .pill{
+    padding: 0.45rem 1rem; border-radius:999px; border:1px solid var(--blood-dim);
+    font-size: 0.78rem; letter-spacing:0.08em; color: var(--paper-dim);
+    background: rgba(255,255,255,0.02);
+  }
+  .pill strong{ color: var(--paper); }
+
+  footer{
+    position:relative; z-index:10; text-align:center;
+    padding: 1.5rem 1rem 2.2rem; font-size:0.7rem; letter-spacing:0.2em;
+    color: var(--blood-dim); text-transform:uppercase;
+  }
+
+  .hidden{ display:none !important; }
+
+  @media (prefers-reduced-motion: reduce){
+    .fog{ animation:none; }
+    .ring.green{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="fog"></div>
+
+<div class="silhouettes">
+  <div class="figure f1"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet">
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0f10"/><stop offset="100%" stop-color="#050303"/></linearGradient></defs>
+    <path d="M50 20 C30 20 22 45 22 70 L18 200 L82 200 L78 70 C78 45 70 20 50 20 Z" fill="url(#g1)"/>
+    <ellipse cx="50" cy="28" rx="16" ry="18" fill="#0a0707"/>
+    <ellipse class="red-cloud" cx="35" cy="100" rx="9" ry="13"/>
+    <ellipse class="red-cloud" cx="62" cy="150" rx="7" ry="10"/>
+  </svg></div>
+  <div class="figure f2"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet">
+    <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0f10"/><stop offset="100%" stop-color="#050303"/></linearGradient></defs>
+    <path d="M50 15 C28 15 20 42 20 68 L14 200 L86 200 L80 68 C80 42 72 15 50 15 Z" fill="url(#g2)"/>
+    <ellipse cx="50" cy="24" rx="17" ry="19" fill="#0a0707"/>
+    <ellipse class="red-cloud" cx="42" cy="90" rx="10" ry="15"/>
+    <ellipse class="red-cloud" cx="65" cy="60" rx="6" ry="9"/>
+    <ellipse class="red-cloud" cx="30" cy="160" rx="8" ry="11"/>
+  </svg></div>
+  <div class="figure f3"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet">
+    <defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0f10"/><stop offset="100%" stop-color="#050303"/></linearGradient></defs>
+    <path d="M50 18 C29 18 21 44 21 69 L16 200 L84 200 L79 69 C79 44 71 18 50 18 Z" fill="url(#g3)"/>
+    <ellipse cx="50" cy="26" rx="16" ry="18" fill="#0a0707"/>
+    <ellipse class="red-cloud" cx="55" cy="105" rx="11" ry="16"/>
+    <ellipse class="red-cloud" cx="32" cy="55" rx="6" ry="9"/>
+    <ellipse class="red-cloud" cx="68" cy="170" rx="8" ry="12"/>
+  </svg></div>
+  <div class="figure f4"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet">
+    <defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0f10"/><stop offset="100%" stop-color="#050303"/></linearGradient></defs>
+    <path d="M50 16 C27 16 19 43 19 68 L13 200 L87 200 L81 68 C81 43 73 16 50 16 Z" fill="url(#g4)"/>
+    <ellipse cx="50" cy="25" rx="17" ry="19" fill="#0a0707"/>
+    <ellipse class="red-cloud" cx="38" cy="95" rx="9" ry="14"/>
+    <ellipse class="red-cloud" cx="64" cy="135" rx="10" ry="14"/>
+  </svg></div>
+  <div class="figure f5"><svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet">
+    <defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0f10"/><stop offset="100%" stop-color="#050303"/></linearGradient></defs>
+    <path d="M50 22 C31 22 23 46 23 71 L19 200 L81 200 L77 71 C77 46 69 22 50 22 Z" fill="url(#g5)"/>
+    <ellipse cx="50" cy="30" rx="15" ry="17" fill="#0a0707"/>
+    <ellipse class="red-cloud" cx="48" cy="110" rx="10" ry="15"/>
+    <ellipse class="red-cloud" cx="30" cy="160" rx="7" ry="10"/>
+  </svg></div>
+</div>
+
+<div class="vignette"></div>
+
+<!-- topbar -->
+<div class="topbar">
+  <div class="brand">AKATSUKI<span>.</span>CLASS</div>
+  <div class="hamburger" id="hamburgerBtn" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- side panel (login + crear clase, maestro) -->
+<div class="side-panel" id="sidePanel">
+  <button class="side-close" id="sideClose" aria-label="Cerrar">✕</button>
+  <h2>Panel del maestro</h2>
+
+  <div id="loginBlock">
+    <button class="google-btn" id="googleBtn">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+      Iniciar sesión con Google
+    </button>
+    <p style="margin-top:0.7rem; font-size:0.78rem; color:var(--paper-dim); line-height:1.5;">
+      Esta demo simula el inicio de sesión. Para conectarlo a cuentas reales de Google, hay que vincular este botón a un backend con OAuth de Google.
+    </p>
+  </div>
+
+  <div id="teacherPanel" class="hidden" style="display:flex; flex-direction:column; gap:1.2rem;">
+    <div class="pill" style="align-self:flex-start;">Sesión: <strong id="teacherEmail"></strong></div>
+
+    <div class="field">
+      <label>Nombre de la clase</label>
+      <input type="text" id="className" placeholder="Ej: Historia 3ro B" />
+    </div>
+    <button class="btn" id="createClassBtn">Crear clase y generar código</button>
+
+    <div id="newCodeBox" class="generated-code hidden">
+      <div class="label">Código secreto generado</div>
+      <div class="code" id="newCodeDisplay">------</div>
+    </div>
+
+    <div>
+      <h2 style="margin-bottom:0.8rem;">Tus clases</h2>
+      <div class="classes-list" id="classesList">
+        <div class="ranking empty" style="padding:0;">Todavía no creaste ninguna clase.</div>
+      </div>
+    </div>
+
+    <button class="btn secondary" id="logoutBtn">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- main -->
+<main>
+
+  <!-- vista inicial / alumno -->
+  <div id="studentView">
+    <div class="eyebrow">Organización de la Niebla Roja</div>
+    <h1 class="title">AKATSUKI</h1>
+    <p class="subtitle">Pon tu nombre y el código secreto</p>
+
+    <form class="join-form" id="joinForm">
+      <div class="row">
+        <input type="text" id="studentName" placeholder="Tu nombre" autocomplete="off" />
+      </div>
+      <div class="row">
+        <input type="text" id="classCode" placeholder="Código secreto de la clase" autocomplete="off" maxlength="6" style="text-transform:uppercase;" />
+        <button type="submit" class="submit" aria-label="Entrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="error-msg" id="joinError"></div>
+    </form>
+  </div>
+
+  <!-- vista clase activa (alumno o maestro entrando con código) -->
+  <div id="classView" class="hidden">
+    <div class="eyebrow" id="classEyebrow">Has entrado a la sombra</div>
+    <h1 class="title" id="classTitle" style="font-size:clamp(2rem,7vw,3.6rem);">CLASE</h1>
+    <p class="subtitle" id="classSubtitle">Esperando que el maestro habilite la señal...</p>
+
+    <div class="class-meta">
+      <div class="pill">Código: <strong id="metaCode">------</strong></div>
+      <div class="pill">Tú: <strong id="metaName">-</strong></div>
+    </div>
+
+    <div class="ring-zone">
+      <div class="ring-status" id="ringStatus">Señal apagada</div>
+      <div class="ring red" id="ring">—</div>
+
+      <div class="teacher-controls hidden" id="teacherRingControls">
+        <button class="toggle-btn go" id="setGreenBtn">Activar (verde)</button>
+        <button class="toggle-btn stop active" id="setRedBtn">Detener (rojo)</button>
+        <button class="toggle-btn reset" id="resetRoundBtn">Reiniciar ronda</button>
+      </div>
+    </div>
+
+    <div class="ranking">
+      <h3>Orden de respuesta</h3>
+      <ol id="rankingList"></ol>
+    </div>
+
+    <div style="margin-top:2.2rem;">
+      <button class="btn secondary" id="leaveClassBtn">Salir</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>Akatsuki · Amanecer Carmesí</footer>
+
+<script>
+  // ---------- estado ----------
+  let teacherEmail = null;
+  let currentClass = null; // {code, name, status:'red'|'green', tapped:[{name, t}], roundId}
+  let role = null; // 'teacher' | 'student'
+  let studentName = null;
+  let pollInterval = null;
+
+  const sidePanel = document.getElementById('sidePanel');
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const sideClose = document.getElementById('sideClose');
+  const loginBlock = document.getElementById('loginBlock');
+  const teacherPanel = document.getElementById('teacherPanel');
+  const googleBtn = document.getElementById('googleBtn');
+  const teacherEmailEl = document.getElementById('teacherEmail');
+  const createClassBtn = document.getElementById('createClassBtn');
+  const className = document.getElementById('className');
+  const newCodeBox = document.getElementById('newCodeBox');
+  const newCodeDisplay = document.getElementById('newCodeDisplay');
+  const classesList = document.getElementById('classesList');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  const studentView = document.getElementById('studentView');
+  const classView = document.getElementById('classView');
+  const joinForm = document.getElementById('joinForm');
+  const studentNameInput = document.getElementById('studentName');
+  const classCodeInput = document.getElementById('classCode');
+  const joinError = document.getElementById('joinError');
+
+  const classEyebrow = document.getElementById('classEyebrow');
+  const classTitle = document.getElementById('classTitle');
+  const classSubtitle = document.getElementById('classSubtitle');
+  const metaCode = document.getElementById('metaCode');
+  const metaName = document.getElementById('metaName');
+  const ring = document.getElementById('ring');
+  const ringStatus = document.getElementById('ringStatus');
+  const teacherRingControls = document.getElementById('teacherRingControls');
+  const setGreenBtn = document.getElementById('setGreenBtn');
+  const setRedBtn = document.getElementById('setRedBtn');
+  const resetRoundBtn = document.getElementById('resetRoundBtn');
+  const rankingList = document.getElementById('rankingList');
+  const leaveClassBtn = document.getElementById('leaveClassBtn');
+
+  // ---------- helpers ----------
+  function genCode(){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for(let i=0;i<6;i++) s += chars[Math.floor(Math.random()*chars.length)];
+    return s;
+  }
+
+  async function storageGet(key, shared){
+    try{
+      const res = await window.storage.get(key, shared);
+      return res ? JSON.parse(res.value) : null;
+    } catch(e){ return null; }
+  }
+  async function storageSet(key, value, shared){
+    try{
+      await window.storage.set(key, JSON.stringify(value), shared);
+      return true;
+    } catch(e){ return false; }
+  }
+
+  // ---------- side panel ----------
+  hamburgerBtn.addEventListener('click', () => sidePanel.classList.add('open'));
+  sideClose.addEventListener('click', () => sidePanel.classList.remove('open'));
+
+  googleBtn.addEventListener('click', () => {
+    // simulación de login con Google
+    const fakeEmail = 'maestro' + Math.floor(Math.random()*900+100) + '@gmail.com';
+    teacherEmail = fakeEmail;
+    teacherEmailEl.textContent = teacherEmail;
+    loginBlock.classList.add('hidden');
+    teacherPanel.classList.remove('hidden');
+    refreshClassesList();
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    teacherEmail = null;
+    teacherPanel.classList.add('hidden');
+    loginBlock.classList.remove('hidden');
+    newCodeBox.classList.add('hidden');
+    className.value = '';
+  });
+
+  // ---------- crear clase ----------
+  createClassBtn.addEventListener('click', async () => {
+    const name = className.value.trim();
+    if(!name) return;
+    const code = genCode();
+    const classData = {
+      code,
+      name,
+      teacher: teacherEmail,
+      status: 'red',
+      roundId: 1,
+      tapped: [],
+      createdAt: Date.now()
+    };
+    await storageSet('class:' + code, classData, true);
+
+    // guardar referencia en la lista del maestro
+    const myClasses = await storageGet('teacherclasses:' + teacherEmail, false) || [];
+    myClasses.unshift({ code, name });
+    await storageSet('teacherclasses:' + teacherEmail, myClasses, false);
+
+    newCodeDisplay.textContent = code;
+    newCodeBox.classList.remove('hidden');
+    className.value = '';
+    refreshClassesList();
+  });
+
+  async function refreshClassesList(){
+    const myClasses = await storageGet('teacherclasses:' + teacherEmail, false) || [];
+    if(myClasses.length === 0){
+      classesList.innerHTML = '<div class="ranking empty" style="padding:0;">Todavía no creaste ninguna clase.</div>';
+      return;
+    }
+    classesList.innerHTML = '';
+    myClasses.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'class-chip';
+      div.innerHTML = `<span class="name">${escapeHtml(c.name)}</span><span class="code">${c.code}</span>`;
+      div.addEventListener('click', () => enterClassAsTeacher(c.code));
+      classesList.appendChild(div);
+    });
+  }
+
+  async function enterClassAsTeacher(code){
+    const data = await storageGet('class:' + code, true);
+    if(!data) return;
+    role = 'teacher';
+    currentClass = data;
+    sidePanel.classList.remove('open');
+    showClassView();
+    teacherRingControls.classList.remove('hidden');
+    metaName.textContent = teacherEmail;
+    startPolling();
+  }
+
+  // ---------- alumno: ingresar a clase ----------
+  joinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = studentNameInput.value.trim();
+    const code = classCodeInput.value.trim().toUpperCase();
+    joinError.textContent = '';
+
+    if(!name || !code){
+      joinError.textContent = 'Escribe tu nombre y el código secreto.';
+      return;
+    }
+
+    const data = await storageGet('class:' + code, true);
+    if(!data){
+      joinError.textContent = 'Código no encontrado. Verifica con tu maestro.';
+      return;
+    }
+
+    role = 'student';
+    studentName = name;
+    currentClass = data;
+    metaName.textContent = studentName;
+    showClassView();
+    teacherRingControls.classList.add('hidden');
+    startPolling();
+  });
+
+  // ---------- vista de clase ----------
+  function showClassView(){
+    studentView.classList.add('hidden');
+    classView.classList.remove('hidden');
+    classTitle.textContent = currentClass.name.toUpperCase();
+    metaCode.textContent = currentClass.code;
+    renderClassState();
+  }
+
+  function renderClassState(){
+    if(!currentClass) return;
+
+    if(currentClass.status === 'green'){
+      ring.classList.remove('red', 'tapped');
+      ring.classList.add('green');
+      ring.textContent = 'TOCA';
+      ringStatus.textContent = 'Señal activa';
+      classSubtitle.textContent = '¡La señal está activa! Toca el círculo.';
+    } else {
+      classSubtitle.textContent = 'Esperando que el maestro habilite la señal...';
+      ringStatus.textContent = 'Señal apagada';
+      ring.classList.remove('green');
+      ring.classList.add('red');
+      ring.textContent = '—';
+    }
+
+    // si el alumno ya tocó en esta ronda
+    if(role === 'student'){
+      const already = currentClass.tapped.find(t => t.name === studentName && t.roundId === currentClass.roundId);
+      if(already){
+        ring.classList.remove('green');
+        ring.classList.add('tapped');
+        ring.textContent = '✓';
+        classSubtitle.textContent = '¡Ya tocaste! Esperando a los demás.';
+      }
+    }
+
+    // ranking
+    const list = currentClass.tapped
+      .filter(t => t.roundId === currentClass.roundId)
+      .sort((a,b) => a.t - b.t);
+
+    if(list.length === 0){
+      rankingList.innerHTML = '<div class="ranking empty">Nadie ha tocado todavía.</div>';
+    } else {
+      rankingList.innerHTML = '';
+      list.forEach((t, i) => {
+        const li = document.createElement('li');
+        if(i === 0) li.classList.add('gold');
+        const time = new Date(t.t);
+        const timeStr = time.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        li.innerHTML = `<span class="pos">${i+1}</span><span>${escapeHtml(t.name)}</span><span class="time">${timeStr}</span>`;
+        rankingList.appendChild(li);
+      });
+    }
+  }
+
+  // tap en el círculo (alumno)
+  ring.addEventListener('click', async () => {
+    if(role !== 'student') return;
+    if(!currentClass || currentClass.status !== 'green') return;
+
+    const already = currentClass.tapped.find(t => t.name === studentName && t.roundId === currentClass.roundId);
+    if(already) return;
+
+    // re-leer estado fresco para evitar pisar otros taps
+    const fresh = await storageGet('class:' + currentClass.code, true);
+    if(!fresh || fresh.status !== 'green') return;
+
+    const alreadyFresh = fresh.tapped.find(t => t.name === studentName && t.roundId === fresh.roundId);
+    if(alreadyFresh) return;
+
+    fresh.tapped.push({ name: studentName, t: Date.now(), roundId: fresh.roundId });
+    await storageSet('class:' + fresh.code, fresh, true);
+    currentClass = fresh;
+    renderClassState();
+  });
+
+  // controles del maestro
+  setGreenBtn.addEventListener('click', async () => {
+    if(role !== 'teacher') return;
+    const fresh = await storageGet('class:' + currentClass.code, true);
+    fresh.status = 'green';
+    await storageSet('class:' + fresh.code, fresh, true);
+    currentClass = fresh;
+    setGreenBtn.classList.add('active');
+    setRedBtn.classList.remove('active');
+    renderClassState();
+  });
+
+  setRedBtn.addEventListener('click', async () => {
+    if(role !== 'teacher') return;
+    const fresh = await storageGet('class:' + currentClass.code, true);
+    fresh.status = 'red';
+    await storageSet('class:' + fresh.code, fresh, true);
+    currentClass = fresh;
+    setRedBtn.classList.add('active');
+    setGreenBtn.classList.remove('active');
+    renderClassState();
+  });
+
+  resetRoundBtn.addEventListener('click', async () => {
+    if(role !== 'teacher') return;
+    const fresh = await storageGet('class:' + currentClass.code, true);
+    fresh.roundId = (fresh.roundId || 1) + 1;
+    fresh.status = 'red';
+    await storageSet('class:' + fresh.code, fresh, true);
+    currentClass = fresh;
+    setRedBtn.classList.add('active');
+    setGreenBtn.classList.remove('active');
+    renderClassState();
+  });
+
+  // salir
+  leaveClassBtn.addEventListener('click', () => {
+    stopPolling();
+    currentClass = null;
+    role = null;
+    studentName = null;
+    classView.classList.add('hidden');
+    studentView.classList.remove('hidden');
+    studentNameInput.value = '';
+    classCodeInput.value = '';
+    ring.classList.remove('green','tapped');
+    ring.classList.add('red');
+  });
+
+  // ---------- polling para sincronizar entre maestro/alumnos ----------
+  function startPolling(){
+    stopPolling();
+    pollInterval = setInterval(async () => {
+      if(!currentClass) return;
+      const fresh = await storageGet('class:' + currentClass.code, true);
+      if(fresh){
+        currentClass = fresh;
+        renderClassState();
+      }
+    }, 1500);
+  }
+  function stopPolling(){
+    if(pollInterval) clearInterval(pollInterval);
+    pollInterval = null;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
